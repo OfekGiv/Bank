@@ -5,7 +5,7 @@
 #include <pthread.h>
 #include "bank.h"
 
-std::map<int,bankAccount> accounts;
+std::map<std::string,bankAccount> accounts;
 
 int main(int argc, char *argv[])
 {
@@ -25,17 +25,20 @@ int main(int argc, char *argv[])
     
     std::cout << accounts[1234].getBalance() << std::endl;
 */
-    
-    pthread_t threads[argc-1];
+    // (argc-1) ATM threads + 1 bank thread + 1 print thread 
+    pthread_t atmThreads[argc-1];
+    pthread_t bankThread;
     atmThreadArgs atmThrArgs[argc-1];
    
     int rc,t,i;
+
+    pthread_create(&bankThread,NULL,bankRoutine,NULL);
     
     for (t=1;t < argc;t++)
     {
         atmThrArgs[t-1].atmNum = t;
         atmThrArgs[t-1].inputFileName = argv[t];
-        if (rc = pthread_create(&threads[t-1],NULL,atmRoutine,&atmThrArgs[t-1]))
+        if (rc = pthread_create(&atmThreads[t-1],NULL,atmRoutine,&atmThrArgs[t-1]))
         {
             perror("Bank error");
             return EXIT_FAILURE;
@@ -44,7 +47,7 @@ int main(int argc, char *argv[])
 
     for(i=1; i<argc;i++)
     {
-        pthread_join(threads[i-1],NULL);
+        pthread_join(atmThreads[i-1],NULL);
     }
     
     return EXIT_SUCCESS; 

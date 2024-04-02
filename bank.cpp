@@ -1,11 +1,11 @@
 
 #include "bank.h"
 
-extern std::map<int,bankAccount> accounts;
+extern std::map<std::string,bankAccount> accounts;
 
 /***************** Bank account class functions ******************/
 
-bankAccount::bankAccount(int accNum, int accPwd, int accBln)
+bankAccount::bankAccount(std::string accNum, std::string accPwd, int accBln)
     : accountNumber(accNum), password(accPwd), balance(accBln) 
 {
     pthread_mutex_init(&account_mutex,NULL);
@@ -40,7 +40,7 @@ int bankAccount::getBalance()
     return balance;
 }
 
-int bankAccount::getPassword()
+std::string bankAccount::getPassword()
 {
     return password;
 }
@@ -116,22 +116,25 @@ int cmdParser (std::string cmd, atmCommandArgs* cmdArgs)
     {
         
         cmdArgs->cmd = tokens.at(0);
-        cmdArgs->accoutNum = std::stoi(tokens.at(1));
-        cmdArgs->password = std::stoi(tokens.at(2));
+        cmdArgs->accoutNum = tokens.at(1);
+        cmdArgs->password = tokens.at(2);
         cmdArgs->amount = std::stoi(tokens.at(3));
     }
     else
     {
         
         cmdArgs->cmd = tokens.at(0);
-        cmdArgs->accoutNum = std::stoi(tokens.at(1));
-        cmdArgs->password = std::stoi(tokens.at(2));
-        cmdArgs->targetAccountNum = std::stoi(tokens.at(3));
+        cmdArgs->accoutNum = tokens.at(1);
+        cmdArgs->password = tokens.at(2);
+        cmdArgs->targetAccountNum = tokens.at(3);
         cmdArgs->amount = std::stoi(tokens.at(4));
     }
 
 }
-
+void createBankaccount()
+{
+    accounts["Bank"] = bankAccount("Bank","0000",0);
+}
 
 /********************** ATM thread routine ***************************/
 
@@ -259,7 +262,7 @@ void *atmRoutine (void *args)
         else if (currentCmd.cmd == std::string(1,'T')) 
         {
             usleep(ONE_SECOND_DELAY);
-            int accNum = -1;
+            std::string accNum;
             auto it1 = accounts.find(currentCmd.accoutNum);
             auto it2 = accounts.find(currentCmd.targetAccountNum);
             if (it1 == accounts.end())
@@ -267,7 +270,7 @@ void *atmRoutine (void *args)
             else if (it2 == accounts.end())
                 accNum = currentCmd.targetAccountNum;
 
-            if (accNum != -1) // If account with accoutNum ID does not exist
+            if (!accNum.empty()) // If account with accoutNum ID does not exist
             {
                 std::cout << "Error " << atmArgs->atmNum << ": Your transaction failed - account id " << accNum << " does not exist" << std::endl;
                 //return NULL;
@@ -302,4 +305,39 @@ void *atmRoutine (void *args)
         pthread_exit(NULL); // TODO: check if return value is NULL
     }
     // std::cout << "ATM number " << atmArgs->atmNum << ". File name: " << atmArgs->inputFileName << std::endl;
+}
+
+
+/********************** Bank thread routine ***************************/
+
+void *bankRoutine (void *args)
+{
+    float commissionPercent;
+    int commissionFee;
+    int curBalance;
+    int newBalance;
+    while(1)
+    {
+        commissionPercent = ((rand() % 5) + 1.0)/100.0;
+
+        for (auto it =accounts.begin(); it != accounts.end(); ++it)
+        {
+            if (it->first != "Bank")
+            {
+                curBalance = accounts[it->first].getBalance();
+                commissionFee = curBalance*commissionPercent;
+                newBalance = curBalance - commissionFee;
+                if (newBalance > 0 )
+                {
+                    accounts[it->first].withdraw(commissionFee);
+                    accounts["Bank"].deposit(commissionFee);
+                    std::cout << "Bank: commissions of " << commissionPercent << "% were charged, the bank gained "\
+                    << commissionFee << "$ from account " << it->first << std::endl;
+                }
+            }
+        }
+        //std::cout << "Bank " << accounts["Bank"].getBalance() << std::endl;
+        usleep(THREE_SECOND_DELAY);
+
+    }
 }

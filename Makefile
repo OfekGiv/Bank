@@ -7,4 +7,4 @@ main.o: main.cpp
 bank.o: bank.cpp bank.h
 	$(CC) $(CFLAGS) -c bank.cpp
 clean:
-	rm -rf *.o *~ "#"* core.* 
+	rm -rf *.o *~ "#"* core.* Bank 

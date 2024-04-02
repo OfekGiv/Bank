@@ -1,0 +1,2 @@
+1. ATM executes a command every 100ms and every command takes 1 second. If first command is 'open account' and the second command is
+   'balance' for the same account, should it 
